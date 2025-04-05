@@ -2,7 +2,7 @@
 import { ScoreResponse } from "@/types";
 
 // In a real app, this would be in an environment variable
-const API_KEY = "YOUR_AUTH_KEY"; // Replace with your actual key later
+const API_KEY = "{YOUR_AUTH_KEY}"; // Replace with your actual key
 
 export const submitAudioForScoring = async (audioBlob: Blob): Promise<ScoreResponse> => {
   try {
