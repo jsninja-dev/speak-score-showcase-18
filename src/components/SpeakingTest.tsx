@@ -40,10 +40,16 @@ export function SpeakingTest({ prompt, onReset }: SpeakingTestProps) {
     setIsSubmitting(true);
 
     try {
+      // Log for debugging
+      console.log("Submitting audio recording, size:", audioBlob.size, "bytes");
+      
       const scoreResponse = await submitAudioForScoring(audioBlob);
+      console.log("Received score response:", scoreResponse);
+      
       setScore(scoreResponse);
       setStage(TestStage.RESULTS);
     } catch (error) {
+      console.error("Error processing recording:", error);
       toast({
         title: "Error",
         description: "Failed to submit recording for scoring. Please try again.",
