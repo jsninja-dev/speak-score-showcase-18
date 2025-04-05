@@ -1,20 +1,28 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { ScoreResponse } from "@/types";
 import { 
   Award, 
   MessageSquare, 
-  BarChart, 
   Bookmark,
-  BookOpen
+  BookOpen,
+  FileText
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useRef } from "react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 interface ScoreDisplayProps {
   score: ScoreResponse;
 }
 
 export function ScoreDisplay({ score }: ScoreDisplayProps) {
+  const { toast } = useToast();
+  const reportRef = useRef<HTMLDivElement>(null);
+
   // Helper function to render score bars (0-4 scale)
   const renderScoreBar = (score: number, label: string) => {
     const percentage = (score / 4) * 100;
@@ -34,90 +42,141 @@ export function ScoreDisplay({ score }: ScoreDisplayProps) {
     );
   };
 
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+
+    try {
+      toast({
+        title: "Generating PDF",
+        description: "Please wait while we prepare your report...",
+      });
+
+      const canvas = await html2canvas(reportRef.current);
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save('speaking-score-report.pdf');
+
+      toast({
+        title: "PDF Generated",
+        description: "Your report has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6 w-full max-w-3xl mx-auto">
-      <Card className="border-t-4 border-t-blue-500">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center">
-              <Award className="h-5 w-5 mr-2 text-blue-500" /> 
-              Your Speaking Score
-            </span>
-            <span className="text-3xl font-bold score-gradient">
-              {score.overallScore}/30
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm text-muted-foreground">SCORE BREAKDOWN</h3>
-              {renderScoreBar(score.delivery, "Delivery")}
-              {renderScoreBar(score.languageUse, "Language Use")}
-              {renderScoreBar(score.topicDevelopment, "Topic Development")}
-            </div>
+      <div className="flex justify-end mb-2">
+        <Button 
+          onClick={handleExportPDF} 
+          variant="outline" 
+          className="gap-2"
+        >
+          <FileText className="h-4 w-4" />
+          Export as PDF
+        </Button>
+      </div>
 
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm text-muted-foreground">EQUIVALENT SCORES</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="bg-accent">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <Bookmark className="h-4 w-4 text-blue-500" />
-                      <span className="text-xs font-medium">IELTS</span>
-                    </div>
-                    <p className="text-2xl font-bold mt-2">{score.ieltsMapping}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-accent">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <BookOpen className="h-4 w-4 text-blue-500" />
-                      <span className="text-xs font-medium">CEFR</span>
-                    </div>
-                    <p className="text-2xl font-bold mt-2">{score.cefrMapping}</p>
-                  </CardContent>
-                </Card>
+      <div ref={reportRef}>
+        <Card className="border-t-4 border-t-blue-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center">
+                <Award className="h-5 w-5 mr-2 text-blue-500" /> 
+                Your Speaking Score
+              </span>
+              <span className="text-3xl font-bold score-gradient">
+                {score.overallScore}/30
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm text-muted-foreground">SCORE BREAKDOWN</h3>
+                {renderScoreBar(score.delivery, "Delivery")}
+                {renderScoreBar(score.languageUse, "Language Use")}
+                {renderScoreBar(score.topicDevelopment, "Topic Development")}
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm text-muted-foreground">EQUIVALENT SCORES</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <Card className="bg-accent">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <Bookmark className="h-4 w-4 text-blue-500" />
+                        <span className="text-xs font-medium">IELTS</span>
+                      </div>
+                      <p className="text-2xl font-bold mt-2">{score.ieltsMapping}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-accent">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <BookOpen className="h-4 w-4 text-blue-500" />
+                        <span className="text-xs font-medium">CEFR</span>
+                      </div>
+                      <p className="text-2xl font-bold mt-2">{score.cefrMapping}</p>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <MessageSquare className="h-5 w-5 mr-2 text-blue-500" /> 
-            Detailed Feedback
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <FeedbackItem 
-            title="Fluency" 
-            content={score.feedback.fluency} 
-          />
-          <Separator />
-          <FeedbackItem 
-            title="Pronunciation" 
-            content={score.feedback.pronunciation} 
-          />
-          <Separator />
-          <FeedbackItem 
-            title="Vocabulary" 
-            content={score.feedback.vocabulary} 
-          />
-          <Separator />
-          <FeedbackItem 
-            title="Grammar" 
-            content={score.feedback.grammar} 
-          />
-          <Separator />
-          <FeedbackItem 
-            title="Coherence" 
-            content={score.feedback.coherence} 
-          />
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <MessageSquare className="h-5 w-5 mr-2 text-blue-500" /> 
+              Detailed Feedback
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FeedbackItem 
+              title="Fluency" 
+              content={score.feedback.fluency} 
+            />
+            <Separator />
+            <FeedbackItem 
+              title="Pronunciation" 
+              content={score.feedback.pronunciation} 
+            />
+            <Separator />
+            <FeedbackItem 
+              title="Vocabulary" 
+              content={score.feedback.vocabulary} 
+            />
+            <Separator />
+            <FeedbackItem 
+              title="Grammar" 
+              content={score.feedback.grammar} 
+            />
+            <Separator />
+            <FeedbackItem 
+              title="Coherence" 
+              content={score.feedback.coherence} 
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
