@@ -7,12 +7,13 @@ import {
   MessageSquare, 
   Bookmark,
   BookOpen,
-  FileText
+  FileText,
+  Mic,
+  Book,
+  Target
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRef } from "react";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
 import html2pdf from "html2pdf.js";
 
 interface ScoreDisplayProps {
@@ -22,10 +23,13 @@ interface ScoreDisplayProps {
 export function ScoreDisplay({ score }: ScoreDisplayProps) {
   const { toast } = useToast();
   const reportRef = useRef<HTMLDivElement>(null);
+  const scoreRef = useRef<HTMLDivElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+
 
   // Helper function to render score bars (0-4 scale)
   const renderScoreBar = (score: number, label: string) => {
-    const percentage = (score / 4) * 100;
+    const percentage = (score / 10) * 100;
     return (
       <div className="space-y-1">
         <div className="flex justify-between items-center">
@@ -51,13 +55,12 @@ export function ScoreDisplay({ score }: ScoreDisplayProps) {
         description: "Please wait while we prepare your report...",
       });
 
-            // Usage
       const options = {
-        margin: 1,
+        margin: 0.4,
         filename: 'document.pdf',
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        jsPDF: { unit: 'in', format: [8.3, 20.5], orientation: 'portrait' }
       };
 
       await html2pdf().set(options).from(reportRef.current).save();
@@ -90,7 +93,7 @@ export function ScoreDisplay({ score }: ScoreDisplayProps) {
       </div>
 
       <div ref={reportRef}>
-        <Card className="border-t-4 border-t-blue-500">
+        <Card ref={scoreRef} className="border-t-4 border-t-blue-500">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center">
@@ -102,43 +105,78 @@ export function ScoreDisplay({ score }: ScoreDisplayProps) {
               </span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="font-medium text-sm text-muted-foreground">SCORE BREAKDOWN</h3>
-                {renderScoreBar(score.delivery, "Delivery")}
-                {renderScoreBar(score.languageUse, "Language Use")}
-                {renderScoreBar(score.topicDevelopment, "Topic Development")}
-              </div>
+          <CardContent className="space-y-6">
+            {/* Delivery Construct */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-sm text-muted-foreground flex items-center">
+                <Mic className="h-4 w-4 mr-2" />
+                DELIVERY CONSTRUCT
+              </h3>
+              {renderScoreBar(score.delivery.speakingRate, "Speaking Rate (SR)")}
+              {renderScoreBar(score.delivery.sustainedSpeech, "Sustained Speech (SS)")}
+              {renderScoreBar(score.delivery.pauseFrequency, "Pause Frequency (PF)")}
+              {renderScoreBar(score.delivery.pauseDistribution, "Pause Distribution (DP)")}
+              {renderScoreBar(score.delivery.repetitions, "Repetitions (Re)")}
+              {renderScoreBar(score.delivery.rhythm, "Rhythm (Rh)")}
+              {renderScoreBar(score.delivery.vowels, "Vowels (Vo)")}
+            </div>
 
-              <div className="space-y-4">
-                <h3 className="font-medium text-sm text-muted-foreground">EQUIVALENT SCORES</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <Card className="bg-accent">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <Bookmark className="h-4 w-4 text-blue-500" />
-                        <span className="text-xs font-medium">IELTS</span>
-                      </div>
-                      <p className="text-2xl font-bold mt-2">{score.ieltsMapping}</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-accent">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <BookOpen className="h-4 w-4 text-blue-500" />
-                        <span className="text-xs font-medium">CEFR</span>
-                      </div>
-                      <p className="text-2xl font-bold mt-2">{score.cefrMapping}</p>
-                    </CardContent>
-                  </Card>
-                </div>
+            <Separator />
+
+            {/* Language Use Construct */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-sm text-muted-foreground flex items-center">
+                <Book className="h-4 w-4 mr-2" />
+                LANGUAGE USE CONSTRUCT
+              </h3>
+              {/* {renderScoreBar(score.languageUse.vocabularyDepth, "Vocabulary Depth (VDe)")} */}
+              {renderScoreBar(score.languageUse.vocabularyDiversity, "Vocabulary Diversity (VDi)")}
+              {renderScoreBar(score.languageUse.grammaticalAccuracy, "Grammatical Accuracy (GA)")}
+              {/* {renderScoreBar(score.languageUse.grammaticalComplexity, "Grammatical Complexity (GC)")} */}
+            </div>
+
+            <Separator />
+
+            {/* Topic Development Construct */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-sm text-muted-foreground flex items-center">
+                <Target className="h-4 w-4 mr-2" />
+                TOPIC DEVELOPMENT CONSTRUCT
+              </h3>
+              {renderScoreBar(score.topicDevelopment, "Discourse Coherence (DC)")}
+            </div>
+
+            <Separator />
+
+            {/* Equivalent Scores */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-sm text-muted-foreground">EQUIVALENT SCORES</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="bg-accent">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <Bookmark className="h-4 w-4 text-blue-500" />
+                      <span className="text-xs font-medium">IELTS</span>
+                    </div>
+                    <p className="text-2xl font-bold mt-2">{score.ieltsMapping}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-accent">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <BookOpen className="h-4 w-4 text-blue-500" />
+                      <span className="text-xs font-medium">CEFR</span>
+                    </div>
+                    <p className="text-2xl font-bold mt-2">{score.cefrMapping}</p>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Detailed Feedback */}
+        <Card ref={feedbackRef} className="mt-6">
           <CardHeader>
             <CardTitle className="flex items-center">
               <MessageSquare className="h-5 w-5 mr-2 text-blue-500" /> 
@@ -147,28 +185,63 @@ export function ScoreDisplay({ score }: ScoreDisplayProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <FeedbackItem 
-              title="Fluency" 
-              content={score.feedback.fluency} 
+              title="Speaking Rate" 
+              content={score.feedback.speakingRate} 
             />
             <Separator />
             <FeedbackItem 
-              title="Pronunciation" 
-              content={score.feedback.pronunciation} 
+              title="Sustained Speech" 
+              content={score.feedback.sustainedSpeech} 
             />
             <Separator />
             <FeedbackItem 
-              title="Vocabulary" 
-              content={score.feedback.vocabulary} 
+              title="Pause Frequency" 
+              content={score.feedback.pauseFrequency} 
             />
             <Separator />
             <FeedbackItem 
-              title="Grammar" 
-              content={score.feedback.grammar} 
+              title="Pause Distribution" 
+              content={score.feedback.pauseDistribution} 
             />
             <Separator />
             <FeedbackItem 
-              title="Coherence" 
-              content={score.feedback.coherence} 
+              title="Repetitions" 
+              content={score.feedback.repetitions} 
+            />
+            <Separator />
+            <FeedbackItem 
+              title="Rhythm" 
+              content={score.feedback.rhythm} 
+            />
+            <Separator />
+            <FeedbackItem 
+              title="Vowels" 
+              content={score.feedback.vowels} 
+            />
+            {/* <Separator />
+            <FeedbackItem 
+              title="Vocabulary Depth" 
+              content={score.feedback.vocabularyDepth} 
+            /> */}
+            <Separator />
+            <FeedbackItem 
+              title="Vocabulary Diversity" 
+              content={score.feedback.vocabularyDiversity} 
+            />
+            <Separator />
+            <FeedbackItem 
+              title="Grammatical Accuracy" 
+              content={score.feedback.grammaticalAccuracy} 
+            />
+            {/* <Separator />
+            <FeedbackItem 
+              title="Grammatical Complexity" 
+              content={score.feedback.grammaticalComplexity} 
+            /> */}
+            <Separator />
+            <FeedbackItem 
+              title="Discourse Coherence" 
+              content={score.feedback.discourseCoherence} 
             />
           </CardContent>
         </Card>

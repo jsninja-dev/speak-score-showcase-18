@@ -3,7 +3,7 @@ import { ScoreResponse } from "@/types";
 // In a real app, this would be in an environment variable
 const API_KEY = import.meta.env.VITE_API_KEY; // Replace with your actual key later
 
-export const submitAudioForScoring = async (audioBlob: Blob): Promise<ScoreResponse> => {
+export const submitAudioForScoring = async (audioBlob: Blob): Promise<ScoreResponse | String> => {
   try {
     const url = new URL(
       "https://scorpion.myspeakingscore.com/api/speech-rater"
@@ -25,12 +25,11 @@ export const submitAudioForScoring = async (audioBlob: Blob): Promise<ScoreRespo
       headers: headers,
       body: formData,
     });
-
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-
+    
     const data = await response.json();
+    if (data.success === false) {
+      throw new Error(data.error || "API request failed");
+    }
 
     // store/push api response in local storage
     const mySpeakingScore = localStorage.getItem("mySpeakingScore");
@@ -42,42 +41,70 @@ export const submitAudioForScoring = async (audioBlob: Blob): Promise<ScoreRespo
       localStorage.setItem("mySpeakingScore", JSON.stringify([data]));
     }
     
-    console.log("API response:", data);
-    
     // Convert the API response to our ScoreResponse format
     return mapApiResponseToScoreResponse(data);
   } catch (error) {
-    console.error("Error submitting audio for scoring:", error);
+    return error.message;
     
     // For demo purposes, return mock data if API call fails
-    return getMockScoreResponse();
+    // return getMockScoreResponse();
   }
 };
 
 // Map the API response to our ScoreResponse format
 const mapApiResponseToScoreResponse = (apiResponse: any): ScoreResponse => {
   try {
-    // Map the actual API response format to our ScoreResponse type
     return {
-      // Scale the score from 0-4 to 0-30 for overall score
-      overallScore: Math.round(apiResponse.score * 7.5),
+      // Overall TOEFL Speaking Score
+      overallScore: apiResponse["TOEFL Speaking Score"],
       
-      // Directly use the API's score (0-4 scale) for these
-      delivery: apiResponse.score,
-      languageUse: apiResponse.score,
-      topicDevelopment: apiResponse.score,
+      // Delivery Construct
+      delivery: {
+        speakingRate: apiResponse.sr_score / 10,        // Speaking Rate (SR)
+        sustainedSpeech: apiResponse.ss_score / 10,     // Sustained Speech (SS)
+        pauseFrequency: apiResponse.pf_score / 10,      // Pause Frequency (PF)
+        pauseDistribution: apiResponse.dp_score / 10,   // Distribution of Pauses (DP)
+        repetitions: apiResponse.re_score / 10,         // Repetitions (Re)
+        rhythm: apiResponse.rh_score / 10,              // Rhythm (Rh)
+        vowels: apiResponse.vo_score / 10               // Vowels (Vo)
+      },
       
-      // Use the IELTS and CEFR mappings directly from elsa_results
-      ieltsMapping: apiResponse.elsa_results?.ielts_score?.toString() || "6.5",
-      cefrMapping: apiResponse.elsa_results?.cefr_level || "B2",
+      // Language Use Construct
+      languageUse: {
+        vocabularyDepth: apiResponse.vde_score / 10,    // Vocabulary Depth (VDe)
+        vocabularyDiversity: apiResponse.vdi_score / 10, // Vocabulary Diversity (VDi)
+        grammaticalAccuracy: apiResponse.ga_score / 10,  // Grammatical Accuracy (GA)
+        grammaticalComplexity: apiResponse.gc_score / 10 // Grammatical Complexity (GC)
+      },
       
-      // Generate feedback based on the ELSA scores
+      // Topic Development Construct
+      topicDevelopment: apiResponse.dc_score / 10,      // Discourse Coherence (DC)
+      
+      // Standardized Test Mappings
+      ieltsMapping: apiResponse["IELTS Speaking Estimate"],
+      cefrMapping: apiResponse["CEFR Estimate"],
+      
+      // Detailed Feedback
       feedback: {
-        fluency: generateFeedback("fluency", apiResponse.elsa_results?.fluency),
-        pronunciation: generateFeedback("pronunciation", apiResponse.elsa_results?.pronunciation),
-        vocabulary: generateFeedback("vocabulary", apiResponse.elsa_results?.vocabulary),
-        grammar: generateFeedback("grammar", apiResponse.elsa_results?.grammar),
-        coherence: "Your response shows good organization and development of ideas."
+        speakingRate: generateFeedback("speakingRate", apiResponse.sr_score),
+        sustainedSpeech: generateFeedback("sustainedSpeech", apiResponse.ss_score),
+        pauseFrequency: generateFeedback("pauseFrequency", apiResponse.pf_score),
+        pauseDistribution: generateFeedback("pauseDistribution", apiResponse.dp_score),
+        repetitions: generateFeedback("repetitions", apiResponse.re_score),
+        rhythm: generateFeedback("rhythm", apiResponse.rh_score),
+        vowels: generateFeedback("vowels", apiResponse.vo_score),
+        vocabularyDepth: generateFeedback("vocabularyDepth", apiResponse.vde_score),
+        vocabularyDiversity: generateFeedback("vocabularyDiversity", apiResponse.vdi_score),
+        grammaticalAccuracy: generateFeedback("grammaticalAccuracy", apiResponse.ga_score),
+        grammaticalComplexity: generateFeedback("grammaticalComplexity", apiResponse.gc_score),
+        discourseCoherence: generateFeedback("discourseCoherence", apiResponse.dc_score)
+      },
+
+      // Additional Metrics
+      additionalMetrics: {
+        wpm: apiResponse.wpm,
+        audioLength: apiResponse.audio_length,
+        transcript: apiResponse.transcript
       }
     };
   } catch (error) {
@@ -93,53 +120,117 @@ const generateFeedback = (category: string, score?: number): string => {
   // Generate appropriate feedback based on the score and category
   if (score >= 90) {
     switch (category) {
-      case "fluency":
-        return "Excellent fluency. Your speech flows naturally with very few hesitations.";
-      case "pronunciation":
-        return "Excellent pronunciation. Your speech is clear and easily understood.";
-      case "vocabulary":
-        return "Excellent vocabulary. You use a wide range of precise and appropriate words.";
-      case "grammar":
-        return "Excellent grammar. You use complex sentences accurately with very few errors.";
+      case "speakingRate":
+        return "Excellent speaking rate. Your pace is natural and easy to follow.";
+      case "sustainedSpeech":
+        return "Excellent sustained speech. You maintain a consistent flow with minimal interruptions.";
+      case "pauseFrequency":
+        return "Excellent pause frequency. Your pauses are natural and well-timed.";
+      case "pauseDistribution":
+        return "Excellent pause distribution. Your pauses occur at natural breaks in speech.";
+      case "repetitions":
+        return "Excellent control of repetitions. Your speech flows naturally without unnecessary repetition.";
+      case "rhythm":
+        return "Excellent rhythm. Your speech has a natural cadence and flow.";
+      case "vowels":
+        return "Excellent vowel articulation. Your vowel sounds are clear and consistent.";
+      case "vocabularyDepth":
+        return "Excellent vocabulary depth. You use precise and varied words appropriately.";
+      case "vocabularyDiversity":
+        return "Excellent vocabulary diversity. You use a wide range of words effectively.";
+      case "grammaticalAccuracy":
+        return "Excellent grammatical accuracy. Your sentences are consistently correct.";
+      case "grammaticalComplexity":
+        return "Excellent grammatical complexity. You use varied and sophisticated sentence structures.";
+      case "discourseCoherence":
+        return "Excellent discourse coherence. Your ideas are well-organized and logically connected.";
       default:
         return "Excellent performance in this area.";
     }
-  } else if (score >= 75) {
+  } else if (score >= 70) {
     switch (category) {
-      case "fluency":
-        return "Good fluency. Your speech has a natural flow with occasional hesitations.";
-      case "pronunciation":
-        return "Good pronunciation. Your speech is generally clear with minor accent influences.";
-      case "vocabulary":
-        return "Good vocabulary. You use a variety of words appropriately.";
-      case "grammar":
-        return "Good grammar. You use mostly correct sentences with some complex structures.";
+      case "speakingRate":
+        return "Good speaking rate. Your pace is generally appropriate with occasional variations.";
+      case "sustainedSpeech":
+        return "Good sustained speech. You maintain a good flow with some minor interruptions.";
+      case "pauseFrequency":
+        return "Good pause frequency. Your pauses are generally appropriate.";
+      case "pauseDistribution":
+        return "Good pause distribution. Your pauses mostly occur at appropriate points.";
+      case "repetitions":
+        return "Good control of repetitions. Your speech has occasional but not disruptive repetition.";
+      case "rhythm":
+        return "Good rhythm. Your speech has a generally natural flow.";
+      case "vowels":
+        return "Good vowel articulation. Your vowel sounds are mostly clear.";
+      case "vocabularyDepth":
+        return "Good vocabulary depth. You use appropriate words with some variety.";
+      case "vocabularyDiversity":
+        return "Good vocabulary diversity. You use a good range of words.";
+      case "grammaticalAccuracy":
+        return "Good grammatical accuracy. Your sentences are mostly correct.";
+      case "grammaticalComplexity":
+        return "Good grammatical complexity. You use varied sentence structures.";
+      case "discourseCoherence":
+        return "Good discourse coherence. Your ideas are generally well-organized.";
       default:
         return "Good performance in this area.";
     }
   } else if (score >= 50) {
     switch (category) {
-      case "fluency":
-        return "Fair fluency. Your speech has some hesitations but remains understandable.";
-      case "pronunciation":
-        return "Fair pronunciation. Some sounds may be influenced by your native language.";
-      case "vocabulary":
-        return "Fair vocabulary. You use common words correctly but could expand your range.";
-      case "grammar":
-        return "Fair grammar. You have some errors but they don't prevent understanding.";
+      case "speakingRate":
+        return "Fair speaking rate. Your pace varies and could be more consistent.";
+      case "sustainedSpeech":
+        return "Fair sustained speech. You have noticeable interruptions in your flow.";
+      case "pauseFrequency":
+        return "Fair pause frequency. Your pauses are sometimes too frequent or too long.";
+      case "pauseDistribution":
+        return "Fair pause distribution. Your pauses sometimes occur at awkward points.";
+      case "repetitions":
+        return "Fair control of repetitions. Your speech has noticeable repetition.";
+      case "rhythm":
+        return "Fair rhythm. Your speech flow could be more natural.";
+      case "vowels":
+        return "Fair vowel articulation. Some vowel sounds need improvement.";
+      case "vocabularyDepth":
+        return "Fair vocabulary depth. You could use more precise and varied words.";
+      case "vocabularyDiversity":
+        return "Fair vocabulary diversity. You could use a wider range of words.";
+      case "grammaticalAccuracy":
+        return "Fair grammatical accuracy. You have some consistent errors.";
+      case "grammaticalComplexity":
+        return "Fair grammatical complexity. You could use more varied sentence structures.";
+      case "discourseCoherence":
+        return "Fair discourse coherence. Your ideas could be better organized.";
       default:
         return "Fair performance in this area.";
     }
   } else {
     switch (category) {
-      case "fluency":
-        return "Your speech has frequent pauses and hesitations. Practice speaking more regularly.";
-      case "pronunciation":
-        return "Your pronunciation needs improvement. Focus on the sounds that are difficult for you.";
-      case "vocabulary":
-        return "Try to expand your vocabulary range and use more varied expressions.";
-      case "grammar":
-        return "Work on your grammar accuracy. Focus on sentence structure and verb forms.";
+      case "speakingRate":
+        return "Your speaking rate needs improvement. Try to maintain a more consistent pace.";
+      case "sustainedSpeech":
+        return "Your sustained speech needs improvement. Work on maintaining a continuous flow.";
+      case "pauseFrequency":
+        return "Your pause frequency needs improvement. Try to reduce unnecessary pauses.";
+      case "pauseDistribution":
+        return "Your pause distribution needs improvement. Pauses should occur at natural breaks.";
+      case "repetitions":
+        return "Your control of repetitions needs improvement. Try to reduce unnecessary repetition.";
+      case "rhythm":
+        return "Your rhythm needs improvement. Work on developing a more natural speech flow.";
+      case "vowels":
+        return "Your vowel articulation needs improvement. Focus on clear vowel sounds.";
+      case "vocabularyDepth":
+        return "Your vocabulary depth needs improvement. Work on using more precise words.";
+      case "vocabularyDiversity":
+        return "Your vocabulary diversity needs improvement. Try to use a wider range of words.";
+      case "grammaticalAccuracy":
+        return "Your grammatical accuracy needs improvement. Focus on correct sentence structure.";
+      case "grammaticalComplexity":
+        return "Your grammatical complexity needs improvement. Try using more varied sentences.";
+      case "discourseCoherence":
+        return "Your discourse coherence needs improvement. Work on organizing your ideas better.";
       default:
         return "This area needs improvement.";
     }
@@ -150,17 +241,42 @@ const generateFeedback = (category: string, score?: number): string => {
 const getMockScoreResponse = (): ScoreResponse => {
   return {
     overallScore: 25,
-    delivery: 3.5,
-    languageUse: 3.0,
+    delivery: {
+      speakingRate: 3.5,
+      sustainedSpeech: 3.0,
+      pauseFrequency: 3.5,
+      pauseDistribution: 3.0,
+      repetitions: 3.0,
+      rhythm: 3.5,
+      vowels: 3.0
+    },
+    languageUse: {
+      vocabularyDepth: 3.0,
+      vocabularyDiversity: 3.5,
+      grammaticalAccuracy: 3.0,
+      grammaticalComplexity: 3.5
+    },
     topicDevelopment: 3.5,
     ieltsMapping: "7.0",
     cefrMapping: "C1",
     feedback: {
-      fluency: "Your speech has good flow with only occasional hesitations.",
-      pronunciation: "Your pronunciation is clear with some minor accent influences.",
-      vocabulary: "You use a good range of vocabulary with some academic terms.",
-      grammar: "You demonstrate control of complex sentences with occasional errors.",
-      coherence: "Your response is well-organized with clear main ideas and supporting details."
+      speakingRate: "Good speaking rate. Your pace is generally appropriate with occasional variations.",
+      sustainedSpeech: "Good sustained speech. You maintain a good flow with some minor interruptions.",
+      pauseFrequency: "Good pause frequency. Your pauses are generally appropriate.",
+      pauseDistribution: "Good pause distribution. Your pauses mostly occur at appropriate points.",
+      repetitions: "Good control of repetitions. Your speech has occasional but not disruptive repetition.",
+      rhythm: "Good rhythm. Your speech has a generally natural flow.",
+      vowels: "Good vowel articulation. Your vowel sounds are mostly clear.",
+      vocabularyDepth: "Good vocabulary depth. You use appropriate words with some variety.",
+      vocabularyDiversity: "Good vocabulary diversity. You use a good range of words.",
+      grammaticalAccuracy: "Good grammatical accuracy. Your sentences are mostly correct.",
+      grammaticalComplexity: "Good grammatical complexity. You use varied sentence structures.",
+      discourseCoherence: "Good discourse coherence. Your ideas are generally well-organized."
+    },
+    additionalMetrics: {
+      wpm: 120,
+      audioLength: "120",
+      transcript: "This is a sample transcript."
     }
   };
 };

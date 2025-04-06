@@ -44,15 +44,19 @@ export function SpeakingTest({ prompt, onReset }: SpeakingTestProps) {
       console.log("Submitting audio recording, size:", audioBlob.size, "bytes");
       
       const scoreResponse = await submitAudioForScoring(audioBlob);
-      console.log("Received score response:", scoreResponse);
+      console.log("scoreResponse:", scoreResponse);
+      if(typeof scoreResponse === "string") {
+        throw new Error(scoreResponse || "API request failed");
+      }
       
+      // @ts-ignore
       setScore(scoreResponse);
       setStage(TestStage.RESULTS);
     } catch (error) {
       console.error("Error processing recording:", error);
       toast({
         title: "Error",
-        description: "Failed to submit recording for scoring. Please try again.",
+        description: error.message,
         variant: "destructive",
       });
       setStage(TestStage.SPEAKING);
@@ -171,7 +175,7 @@ export function SpeakingTest({ prompt, onReset }: SpeakingTestProps) {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto mt-10">
+    <div className="w-full max-w-4xl mx-auto my-10">
       {/* Progress Tabs - only show for early stages */}
       {stage < TestStage.RESULTS && (
         <Tabs value={`stage-${stage}`} className="w-full mb-6">

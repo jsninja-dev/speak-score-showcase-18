@@ -1,4 +1,3 @@
-
 export interface SpeakingPrompt {
   id: string;
   question: string;
@@ -7,17 +6,51 @@ export interface SpeakingPrompt {
 }
 
 export interface ScoreResponse {
-  overallScore: number; // 0-30
-  delivery: number; // 0-4
-  languageUse: number; // 0-4
-  topicDevelopment: number; // 0-4
-  ieltsMapping: string; // e.g., "6.5"
-  cefrMapping: string; // e.g., "B2"
+  overallScore: number;
+  
+  // Delivery Construct
+  delivery: {
+    speakingRate: number;        // SR
+    sustainedSpeech: number;     // SS
+    pauseFrequency: number;      // PF
+    pauseDistribution: number;   // DP
+    repetitions: number;         // Re
+    rhythm: number;              // Rh
+    vowels: number;              // Vo
+  };
+  
+  // Language Use Construct
+  languageUse: {
+    vocabularyDepth: number;     // VDe
+    vocabularyDiversity: number; // VDi
+    grammaticalAccuracy: number; // GA
+    grammaticalComplexity: number; // GC
+  };
+  
+  // Topic Development Construct
+  topicDevelopment: number;      // DC
+  
+  ieltsMapping: string;
+  cefrMapping: string;
+  
   feedback: {
-    fluency: string;
-    pronunciation: string;
-    vocabulary: string;
-    grammar: string;
-    coherence: string;
-  }
+    speakingRate: string;
+    sustainedSpeech: string;
+    pauseFrequency: string;
+    pauseDistribution: string;
+    repetitions: string;
+    rhythm: string;
+    vowels: string;
+    vocabularyDepth: string;
+    vocabularyDiversity: string;
+    grammaticalAccuracy: string;
+    grammaticalComplexity: string;
+    discourseCoherence: string;
+  };
+  
+  additionalMetrics: {
+    wpm: number;
+    audioLength: string;
+    transcript: string;
+  };
 }
