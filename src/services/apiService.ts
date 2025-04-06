@@ -1,26 +1,28 @@
-
 import { ScoreResponse } from "@/types";
 
 // In a real app, this would be in an environment variable
-const API_KEY = "YOUR_AUTH_KEY"; // Replace with your actual key later
+const API_KEY = import.meta.env.VITE_API_KEY; // Replace with your actual key later
 
 export const submitAudioForScoring = async (audioBlob: Blob): Promise<ScoreResponse> => {
   try {
-    const url = new URL("https://scorpion.myspeakingscore.com/api/vox");
+    const url = new URL(
+      "https://scorpion.myspeakingscore.com/api/speech-rater"
+    );
     
-    // Create FormData object
-    const formData = new FormData();
-    formData.append('file', audioBlob, "recording.wav");
+    const headers = {
+        "API-KEY": API_KEY,
+        "Accept": "application/json",
+    };
+    
+    const file = new File([audioBlob], "recording.webm", { type: "audio/webm" });
 
-    // API request
+    const formData = new FormData();
+    formData.append('with_feedback', 'yes');
+    formData.append('file', file);
+
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "API-KEY": API_KEY,
-        // Note: Do not set Content-Type header when using FormData
-        // The browser will set it correctly with the boundary parameter
-        "Accept": "application/json",
-      },
+      headers: headers,
       body: formData,
     });
 
@@ -28,8 +30,18 @@ export const submitAudioForScoring = async (audioBlob: Blob): Promise<ScoreRespo
       throw new Error(`API request failed with status ${response.status}`);
     }
 
-    // Process the API response
     const data = await response.json();
+
+    // store/push api response in local storage
+    const mySpeakingScore = localStorage.getItem("mySpeakingScore");
+    if (mySpeakingScore) {
+      const mySpeakingScoreArray = JSON.parse(mySpeakingScore);
+      mySpeakingScoreArray.push(data);
+      localStorage.setItem("mySpeakingScore", JSON.stringify(mySpeakingScoreArray));
+    } else {
+      localStorage.setItem("mySpeakingScore", JSON.stringify([data]));
+    }
+    
     console.log("API response:", data);
     
     // Convert the API response to our ScoreResponse format

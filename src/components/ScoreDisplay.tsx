@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRef } from "react";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import html2pdf from "html2pdf.js";
 
 interface ScoreDisplayProps {
   score: ScoreResponse;
@@ -50,20 +51,16 @@ export function ScoreDisplay({ score }: ScoreDisplayProps) {
         description: "Please wait while we prepare your report...",
       });
 
-      const canvas = await html2canvas(reportRef.current);
-      const imgData = canvas.toDataURL('image/png');
-      
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save('speaking-score-report.pdf');
+            // Usage
+      const options = {
+        margin: 1,
+        filename: 'document.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      await html2pdf().set(options).from(reportRef.current).save();
 
       toast({
         title: "PDF Generated",
@@ -100,7 +97,7 @@ export function ScoreDisplay({ score }: ScoreDisplayProps) {
                 <Award className="h-5 w-5 mr-2 text-blue-500" /> 
                 Your Speaking Score
               </span>
-              <span className="text-3xl font-bold score-gradient">
+              <span className="text-3xl font-bold text-blue-500">
                 {score.overallScore}/30
               </span>
             </CardTitle>

@@ -171,7 +171,7 @@ export function SpeakingTest({ prompt, onReset }: SpeakingTestProps) {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto mt-10">
       {/* Progress Tabs - only show for early stages */}
       {stage < TestStage.RESULTS && (
         <Tabs value={`stage-${stage}`} className="w-full mb-6">

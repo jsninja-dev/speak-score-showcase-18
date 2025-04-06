@@ -25,7 +25,7 @@ export function PrepTimer({ duration, onComplete }: PrepTimerProps) {
   } = useTimer(duration);
 
   useEffect(() => {
-    if (isRunning && time === 0) {
+    if (!isRunning && time === 0) {
       onComplete();
     }
   }, [isRunning, time, onComplete]);

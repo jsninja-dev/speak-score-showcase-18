@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
@@ -34,6 +33,8 @@ export function AudioRecorder({ maxDuration, onRecordingComplete }: AudioRecorde
 
   const [recordingComplete, setRecordingComplete] = useState<boolean>(false);
 
+  const audioRef = useRef<HTMLAudioElement>(null);
+
   // Start the timer when recording starts
   useEffect(() => {
     if (isRecording) {
@@ -45,7 +46,7 @@ export function AudioRecorder({ maxDuration, onRecordingComplete }: AudioRecorde
 
   // Stop recording when timer ends
   useEffect(() => {
-    if (isRunning && time === 0) {
+    if (!isRunning && time === 0) {
       stopRecording();
       setRecordingComplete(true);
     }
@@ -73,6 +74,13 @@ export function AudioRecorder({ maxDuration, onRecordingComplete }: AudioRecorde
     resetRecording();
     resetTimer();
     setRecordingComplete(false);
+  };
+
+  const handleAudioPlay = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play();
+    }
   };
 
   return (
@@ -120,7 +128,13 @@ export function AudioRecorder({ maxDuration, onRecordingComplete }: AudioRecorde
 
         {audioURL && (
           <>
-            <audio src={audioURL} controls className="w-full mt-4" />
+            <audio
+              ref={audioRef}
+              src={audioURL}
+              controls
+              className="w-full mt-4"
+              onPlay={handleAudioPlay}
+            />
             <div className="flex gap-3 mt-4">
               <Button
                 size="sm"
